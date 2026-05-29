@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plant Disease Detection</title>
+
+<style>
+:root{
+  --bg:#ecf9f1;
+  --card:#ffffff;
+  --accent:#1f7a3a;
+  --accent-light:#2aa06c;
+  --muted:#6b7280;
+  --shadow:0 6px 20px rgba(0,0,0,0.10);
+  font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+  margin:0;
+  background:var(--bg);
+}
+
+.container{
+  max-width:900px;
+  margin:30px auto;
+  padding:20px;
+}
+
+/* Title */
+h1{
+  text-align:center;
+  font-size:32px;
+  color:var(--accent);
+  margin-bottom:6px;
+}
+
+.subtitle{
+  text-align:center;
+  color:var(--muted);
+  margin-bottom:24px;
+}
+
+/* Upload card */
+.upload-box{
+  background:var(--card);
+  padding:24px;
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  text-align:center;
+}
+
+.upload-box p{
+  margin:0 0 10px;
+}
+
+input[type="file"]{
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #ccc;
+  background:white;
+  width:100%;
+  max-width:320px;
+}
+
+button{
+  margin-top:16px;
+  padding:12px 20px;
+  border:none;
+  border-radius:12px;
+  background:var(--accent);
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+  font-size:16px;
+}
+
+button:hover{
+  background:var(--accent-light);
+}
+
+/* Result card */
+.result{
+  margin-top:26px;
+  background:var(--card);
+  padding:20px;
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  display:none;
+}
+
+.result img{
+  width:100%;
+  max-height:320px;
+  object-fit:cover;
+  border-radius:12px;
+  margin-bottom:14px;
+}
+
+.result h2{
+  margin:4px 0;
+  color:var(--accent);
+}
+
+.tag{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:20px;
+  background:#e3f7ea;
+  color:var(--accent);
+  font-size:13px;
+  margin-bottom:10px;
+}
+
+.result p{
+  color:var(--muted);
+  margin:6px 0;
+  line-height:1.5;
+}
+
+/* helper text */
+.hint{
+  margin-top:10px;
+  font-size:13px;
+  color:var(--muted);
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>Plant Disease Detection</h1>
+  <p class="subtitle">Upload a leaf or plant image to check for possible diseases, AI / <a href="home.aspx"> back to home </a> </p>
+
+  <!-- Upload area -->
+  <div class="upload-box">
+      <p><strong>Select plant / leaf image:</strong></p>
+      <input type="file" id="imageInput" name="file" accept="image/*">
+      <button type="button" onclick="uploadImage()">
+          Analyze Disease
+      </button>
+      <p id="statusMsg" style="
+color:#1f7a3a;
+font-weight:bold;
+margin-top:10px;">
+      </p>
+      <p class="hint">Tip: rename file like <em>leaf_yellow_spot.jpg</em>, <em>powdery_white_leaf.png</em>, <em>black_rot_leaf.jpg</em> to see different demo results.</p>
+  </div>
+
+  <!-- Result -->
+  <div class="result" id="resultBox" style="display:none;">
+
+      <img id="previewImage" />
+
+      <h2 id="plantName"></h2>
+
+      <div class="tag" id="confidence"></div>
+
+      <p id="family"></p>
+
+      <p id="commonName"></p>
+
+  </div>
+
+</div>
+
+<script>
+    async function uploadImage() {
+
+        const status = document.getElementById("statusMsg");
+        const input = document.getElementById("imageInput");
+
+        status.innerText = "";
+
+        if (input.files.length === 0) {
+            status.innerText = "Please select an image.";
+            return;
+        }
+
+        // preview image
+        document.getElementById("previewImage").src =
+            URL.createObjectURL(input.files[0]);
+
+        status.innerText = "Analyzing plant image...";
+
+        const formData = new FormData();
+        formData.append("file", input.files[0]);
+
+        try {
+
+            const response = await fetch("PlantDiseaseAPI.aspx", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!data.results || data.results.length === 0) {
+                status.innerText = "No plant detected.";
+                return;
+            }
+
+            const best = data.results[0];
+
+            document.getElementById("resultBox").style.display = "block";
+
+            document.getElementById("plantName").innerText =
+                best.species.scientificName;
+
+            document.getElementById("confidence").innerText =
+                "Confidence: " +
+                (best.score * 100).toFixed(2) + "%";
+
+            document.getElementById("family").innerText =
+                "Family: " +
+                best.species.family.scientificNameWithoutAuthor;
+
+            document.getElementById("commonName").innerText =
+                "Common Name: " +
+                (best.species.commonNames[0] || "Not Available");
+
+            status.innerText = "Plant identified successfully ✅";
+
+        }
+        catch (err) {
+
+            console.log(err);
+            status.innerText =
+                "Unable to get result from AI server.";
+        }
+    }
+</script>
+
+</body>
+</html>
